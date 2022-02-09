@@ -3,6 +3,7 @@ import React from 'react';
 import {connect} from 'react-redux';
 import {bindActionCreators} from 'redux';
 import * as userActions from '../../utils/redux/actions/userLogin';
+import FlashMessage from "react-native-flash-message";
 
 class BaseScreen extends React.Component {
 

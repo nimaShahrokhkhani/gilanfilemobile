@@ -12,7 +12,7 @@ import {
     TextInput,
     ScrollView,
     KeyboardAvoidingView,
-    ImageBackground
+    ImageBackground, Platform
 } from 'react-native';
 import {connect} from 'react-redux';
 import {bindActionCreators} from 'redux';
@@ -20,23 +20,64 @@ import * as userActions from '../../utils/redux/actions/userLogin';
 import Services from "../../utils/services/Services";
 import Spinner from "react-native-loading-spinner-overlay";
 import {showMessage, hideMessage} from "react-native-flash-message";
+import CheckBox from '@react-native-community/checkbox';
+import FlashMessage from "react-native-flash-message";
+import FingerprintPopup from "../components/biometric/FingerprintPopup";
+import RNSecureKeyStore, {ACCESSIBLE} from "react-native-secure-key-store";
+import _ from "underscore";
+import dbHelper from "../../helper/db/dbHelper";
+import {FilesSchema} from "../../helper/schema/fileSchema";
+import {CustomTextInput} from "../components/CustomTextInput";
 
 class LoginScreen extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            username: 'admin',
-            password: 'admin',
+            username: '',
+            password: '',
+            agencyCode: '',
             isUsernameFocused: false,
             isPasswordFocused: false,
+            isAgencyCodeFocused: false,
             isSecureTextEntry: false,
-            spinner: false
+            spinner: false,
+            biometricEnable: false
         }
     }
 
     componentDidMount() {
-
+        this.props.navigation.addListener(
+            'focus',
+            payload => {
+                RNSecureKeyStore.get("agencyCode")
+                    .then(agencyCode => {
+                        RNSecureKeyStore.get("username")
+                            .then(username => {
+                                RNSecureKeyStore.get("password")
+                                    .then(password => {
+                                        if (!_.isEmpty(agencyCode) && !_.isEmpty(username) && !_.isEmpty(password)) {
+                                            this.setState({
+                                                biometricEnable: true
+                                            })
+                                        }
+                                    })
+                                    .catch(error => {
+                                    })
+                            })
+                            .catch(error => {
+                            })
+                    })
+                    .catch(error => {
+                    })
+            }
+        );
     }
+
+    onBiometricPress = () => {
+        this.setState({biometricEnable: false}, () => {
+            this.setState({biometricEnable: true})
+        })
+    };
 
     hideLoading = () => {
         this.setState({spinner: false})
@@ -45,7 +86,11 @@ class LoginScreen extends React.Component {
     onLoginPress = () => {
         let {user, actions, navigation} = this.props;
         this.setState({spinner: true}, () => {
-            Services.signInPanel({username: this.state.username, password: this.state.password}).then((res) => {
+            Services.signInPanel({
+                username: this.state.username,
+                password: this.state.password,
+                agencyCode: this.state.agencyCode
+            }).then((res) => {
                 this.hideLoading();
                 // showMessage({
                 //     message: 'موفق',
@@ -58,7 +103,7 @@ class LoginScreen extends React.Component {
                 // });
                 actions.userLogin(res.data);
                 navigation.navigate('HomeScreen')
-            }).catch(() => {
+            }).catch((error) => {
                 this.hideLoading();
                 showMessage({
                     message: 'خطا',
@@ -70,6 +115,93 @@ class LoginScreen extends React.Component {
                     icon: {icon: "success", position: "right"}
                 });
             })
+        })
+    };
+
+    onBiometricLoginPress = () => {
+        let {user, actions, navigation} = this.props;
+        this.setState({spinner: true}, () => {
+
+            RNSecureKeyStore.get("agencyCode")
+                .then(agencyCode => {
+                    RNSecureKeyStore.get("username")
+                        .then(username => {
+                            RNSecureKeyStore.get("password")
+                                .then(password => {
+                                    if (!_.isEmpty(agencyCode) && !_.isEmpty(username) && !_.isEmpty(password)) {
+                                        Services.signInPanel({
+                                            username: username,
+                                            password: password,
+                                            agencyCode: agencyCode
+                                        }).then((res) => {
+                                            this.hideLoading();
+                                            actions.userLogin(res.data);
+                                            navigation.navigate('HomeScreen')
+                                        }).catch((error) => {
+                                            this.hideLoading();
+                                            showMessage({
+                                                message: 'خطا',
+                                                description: 'نام کاربری یا رمز عبور اشتباه است.',
+                                                type: "danger",
+                                                style: {textAlign: 'right', width: '100%', justifyContent: 'flex-end'},
+                                                titleStyle: {
+                                                    textAlign: 'right',
+                                                    fontFamily: 'IRANSansMobileFaNum-Bold'
+                                                },
+                                                textStyle: {
+                                                    textAlign: 'right',
+                                                    fontFamily: 'IRANSansMobileFaNum-Light',
+                                                },
+                                                icon: {icon: "success", position: "right"}
+                                            });
+                                        })
+                                    } else {
+                                        showMessage({
+                                            message: 'خطا',
+                                            description: 'خطا در ورود کاربر.',
+                                            type: "danger",
+                                            style: {textAlign: 'right', width: '100%', justifyContent: 'flex-end'},
+                                            titleStyle: {textAlign: 'right', fontFamily: 'IRANSansMobileFaNum-Bold'},
+                                            textStyle: {textAlign: 'right', fontFamily: 'IRANSansMobileFaNum-Light',},
+                                            icon: {icon: "success", position: "right"}
+                                        });
+                                    }
+                                })
+                                .catch(error => {
+                                    showMessage({
+                                        message: 'خطا',
+                                        description: 'خطا در ورود کاربر.',
+                                        type: "danger",
+                                        style: {textAlign: 'right', width: '100%', justifyContent: 'flex-end'},
+                                        titleStyle: {textAlign: 'right', fontFamily: 'IRANSansMobileFaNum-Bold'},
+                                        textStyle: {textAlign: 'right', fontFamily: 'IRANSansMobileFaNum-Light',},
+                                        icon: {icon: "success", position: "right"}
+                                    });
+                                })
+                        })
+                        .catch(error => {
+                            showMessage({
+                                message: 'خطا',
+                                description: 'خطا در ورود کاربر.',
+                                type: "danger",
+                                style: {textAlign: 'right', width: '100%', justifyContent: 'flex-end'},
+                                titleStyle: {textAlign: 'right', fontFamily: 'IRANSansMobileFaNum-Bold'},
+                                textStyle: {textAlign: 'right', fontFamily: 'IRANSansMobileFaNum-Light',},
+                                icon: {icon: "success", position: "right"}
+                            });
+                        })
+                })
+                .catch(error => {
+                    showMessage({
+                        message: 'خطا',
+                        description: 'خطا در ورود کاربر.',
+                        type: "danger",
+                        style: {textAlign: 'right', width: '100%', justifyContent: 'flex-end'},
+                        titleStyle: {textAlign: 'right', fontFamily: 'IRANSansMobileFaNum-Bold'},
+                        textStyle: {textAlign: 'right', fontFamily: 'IRANSansMobileFaNum-Light',},
+                        icon: {icon: "success", position: "right"}
+                    });
+                })
         })
     };
 
@@ -85,6 +217,12 @@ class LoginScreen extends React.Component {
         })
     };
 
+    onAgencyCodeTextChange = (text) => {
+        this.setState({
+            agencyCode: text
+        })
+    };
+
     onUsernameFocus = () => {
         this.setState({
             isUsernameFocused: true
@@ -94,6 +232,12 @@ class LoginScreen extends React.Component {
     onPasswordFocus = () => {
         this.setState({
             isPasswordFocused: true
+        })
+    };
+
+    onAgencyCodeFocus = () => {
+        this.setState({
+            isAgencyCodeFocused: true
         })
     };
 
@@ -109,21 +253,35 @@ class LoginScreen extends React.Component {
         })
     };
 
+    onAgencyCodeBlur = () => {
+        this.setState({
+            isAgencyCodeFocused: false
+        })
+    };
+
     onShowPasswordChange = () => {
         this.setState({
             isSecureTextEntry: !this.state.isSecureTextEntry
         })
     };
 
+    onRegisterPress = () => {
+        let {navigation} = this.props;
+        navigation.navigate('RegisterScreen')
+    };
+
+    handleFingerPrintPopup = () => {
+        this.onBiometricLoginPress();
+    };
+
     render() {
-        const {locale} = this.props;
-        let {username, password, isUsernameFocused, isPasswordFocused, isSecureTextEntry} = this.state;
+        let {username, password, agencyCode, isUsernameFocused, isPasswordFocused, isAgencyCodeFocused, isSecureTextEntry, biometricEnable} = this.state;
         return (
             <View>
                 <StatusBar backgroundColor="#13213c" barStyle="light-content"/>
                 <SafeAreaView style={styles.topView}/>
                 <SafeAreaView>
-                    <ImageBackground source={require('../images/login-bg.jpeg')} style={styles.backgroundImage}>
+                    <ImageBackground source={require('../images/loginBg.jpeg')} style={styles.backgroundImage}>
                         <View>
 
                             <Spinner
@@ -132,12 +290,37 @@ class LoginScreen extends React.Component {
                                 textStyle={{fontFamily: 'IRANSansMobileFaNum-Bold', color: '#fff'}}
                                 overlayColor={'#000000dd'}
                             />
-                            <KeyboardAvoidingView behavior={'padding'} keyboardVerticalOffset={70} enabled={true}
+                            {biometricEnable &&
+                            <FingerprintPopup handlePopupDismissedLegacy={this.handleFingerPrintPopup}
+                                              onAuthenticate={this.handleFingerPrintPopup}
+                                              handlePopupDismissed={this.handleFingerPrintPopup}/>
+                            }
+                            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? "padding" : ""}
+                                                  keyboardVerticalOffset={Platform.OS === 'ios' ? -70 : 70}
+                                                  enabled={true}
                                                   style={{
                                                       height: '100%',
                                                   }}>
-                                <Image style={{width: 200, height: 300, resizeMode: 'contain', alignSelf: 'center'}} source={require('../images/gilan-file-logo.png')}/>
+                                <Image style={{width: 100, height: 100, resizeMode: 'contain', alignSelf: 'center'}}
+                                       source={require('../images/gilan-file-logo.png')}/>
                                 <ScrollView style={styles.container}>
+
+                                    <View style={styles.inputContainer}>
+                                        <View style={{
+                                            borderBottomWidth: 2,
+                                            borderBottomColor: isAgencyCodeFocused ? '#0f0' : '#f0f0f0',
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
+                                        }}>
+                                            <TextInput onBlur={this.onAgencyCodeBlur}
+                                                       onFocus={this.onAgencyCodeFocus}
+                                                       style={styles.input} placeholder={"کد آژانس"}
+                                                       value={agencyCode} onChangeText={this.onAgencyCodeTextChange}
+                                            textAlign={'right'}/>
+                                            <Image source={require('../images/contact.png')}/>
+                                        </View>
+                                    </View>
 
                                     <View style={styles.inputContainer}>
                                         <View style={{
@@ -163,6 +346,17 @@ class LoginScreen extends React.Component {
                                             alignItems: 'center',
                                             justifyContent: 'center'
                                         }}>
+                                            {biometricEnable &&
+                                            <TouchableOpacity onPress={this.onBiometricPress}>
+                                                <Image style={{
+                                                    width: 20,
+                                                    height: 20,
+                                                    resizeMode: 'contain',
+                                                    tintColor: 'blue'
+                                                }}
+                                                       source={require('../images/biometric.png')}/>
+                                            </TouchableOpacity>
+                                            }
                                             <TextInput secureTextEntry={!isSecureTextEntry}
                                                        onBlur={this.onPasswordBlur}
                                                        onFocus={this.onPasswordFocus}
@@ -172,6 +366,9 @@ class LoginScreen extends React.Component {
                                         </View>
                                     </View>
 
+
+                                </ScrollView>
+                                <View style={{marginBottom: Platform.OS === 'ios' ? 120 : 0}}>
                                     <TouchableOpacity onPress={this.onLoginPress} style={{
                                         alignSelf: 'center',
                                         backgroundColor: '#13213c',
@@ -188,7 +385,23 @@ class LoginScreen extends React.Component {
                                             fontFamily: 'IRANSansMobileFaNum-Bold'
                                         }}>{'ورود'}</Text>
                                     </TouchableOpacity>
-                                </ScrollView>
+
+                                    <TouchableOpacity onPress={this.onRegisterPress} style={{
+                                        alignSelf: 'center',
+                                        width: '80%',
+                                        marginTop: 10,
+                                        marginBottom: 10,
+                                        height: 50,
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}>
+                                        <Text style={{
+                                            color: '#9a184c',
+                                            fontSize: 18,
+                                            fontFamily: 'IRANSansMobileFaNum-Bold',
+                                        }}>{'ثبت نام'}</Text>
+                                    </TouchableOpacity>
+                                </View>
                             </KeyboardAvoidingView>
 
                         </View>
@@ -204,7 +417,7 @@ class LoginScreen extends React.Component {
 const styles = StyleSheet.create({
     container: {
         width: '100%',
-        height: '100%'
+        // height: '80%'
     },
     childrenContainer: {
         flex: 1,
@@ -274,7 +487,8 @@ const styles = StyleSheet.create({
         height: 50,
         fontFamily: 'IRANSansMobileFaNum-Light',
         textAlign: 'right',
-        marginHorizontal: 10
+        marginHorizontal: 10,
+        color: '#000'
     },
     checkboxContainer: {
         flexDirection: 'row',

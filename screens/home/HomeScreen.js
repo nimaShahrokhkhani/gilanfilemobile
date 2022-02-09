@@ -19,13 +19,16 @@ import AddFileScreen from "../addFile/AddFileScreen";
 import bindActionCreators from "react-redux/es/utils/bindActionCreators";
 import * as userActions from "../../utils/redux/actions/userLogin";
 import {connect} from 'react-redux';
-import {DrawerItems} from 'react-navigation-drawer';
 import {
     DrawerContentScrollView,
     DrawerItemList,
 } from '@react-navigation/drawer';
 import MapScreen from "../map/MapScreen";
 import HomeMenuScreen from "../homeMenu/HomeMenuScreen";
+import SearchFileScreen from "../searchFile/SearchFileScreen";
+import GetFilesScreen from "../getFiles/GetFilesScreen";
+import SettingScreen from "../setting/SettingScreen";
+import ZonkanScreen from "../zonkan/ZonkanScreen";
 
 const Drawer = createDrawerNavigator();
 
@@ -38,11 +41,10 @@ function CustomDrawerContent(props) {
                         <View style={styles.userLoginContainer}>
                             <Image source={require('../images/user-128.png')}
                                    style={styles.userIcon}/>
-                            <Text style={styles.username}>{props.screenProps.user.username}</Text>
+                            <Text style={styles.username}>{props.screenProps.user[0].username}</Text>
                             <View style={styles.btnContainer}>
                                 <TouchableOpacity onPress={() => {
-                                    props.screenProps.actions.userLogin({});
-                                    props.navigation.dispatch(DrawerActions.toggleDrawer())
+                                    props.navigation.navigate('LoginScreen')
                                 }} style={styles.accountBtn}>
                                     <Text
                                         style={styles.accountBtnText}>خروج</Text>
@@ -92,7 +94,11 @@ class HomeScreen extends React.Component {
             }}>
                 <Drawer.Screen name="خانه" component={HomeMenuScreen}/>
                 <Drawer.Screen name="افزودن فایل" component={AddFileScreen}/>
+                <Drawer.Screen name="جستجو فایل" component={SearchFileScreen}/>
                 <Drawer.Screen name="نقشه" component={MapScreen}/>
+                <Drawer.Screen name="دریافت فایل" component={GetFilesScreen}/>
+                <Drawer.Screen name="زونکن" component={ZonkanScreen}/>
+                <Drawer.Screen name="تنظیمات" component={SettingScreen}/>
             </Drawer.Navigator>
         );
     }
@@ -153,7 +159,8 @@ const styles = StyleSheet.create({
         padding: 10,
         backgroundColor: '#fff',
         borderRadius: 20,
-        marginHorizontal: 2
+        marginHorizontal: 5,
+        marginTop: 10
     }
 });
 

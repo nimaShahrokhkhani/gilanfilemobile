@@ -1,5 +1,5 @@
 import React, {Component} from 'react';
-import {TouchableOpacity, View, StyleSheet} from 'react-native';
+import {TouchableOpacity, View, StyleSheet, Text} from 'react-native';
 import PropTypes from 'prop-types';
 import {WheelPicker} from 'react-native-wheel-picker-android'
 import {TextInput} from 'react-native-paper';
@@ -11,6 +11,8 @@ import {
     toJalaali,
     isLeapJalaaliYear
 } from '../../utils/date/jalali-js';
+import StringUtils from "../../utils/string/StringUtils";
+import {CustomTextInput} from "./CustomTextInput";
 
 export default class CustomDatePicker extends Component {
 
@@ -25,7 +27,7 @@ export default class CustomDatePicker extends Component {
         onChangeText: PropTypes.func,
         placeholder: PropTypes.string,
         currentDate: PropTypes.date
-    }
+    };
 
     constructor(props) {
         super(props);
@@ -39,9 +41,7 @@ export default class CustomDatePicker extends Component {
         this.state = {
             wheelPickerDay: [],
             isModalVisible: false,
-            calendarValue: this.props.value ? (calendarType === 'jalali' ?
-                DateUtils.toJalaliDate(new Date(this.props.value), 'DD/A/YYYY') :
-                DateUtils.toGregorianDate(new Date(this.props.value), 'DD/A/YYYY')) : '',
+            calendarValue: this.props.value ? StringUtils.convertMillisecondToShamsi(this.props.value) : '',
             yearValue: 0,
             monthValue: 0,
             dayValue: 0,
@@ -63,13 +63,13 @@ export default class CustomDatePicker extends Component {
 
     updateModalInnerView = () => {
         this._modalRef && this._modalRef.updateInnerView()
-    }
+    };
 
     getValue() {
         let year = parseInt(this.state.calendarValue.split('/')[2]);
         let month = parseInt(this.wheelPickerMonth.indexOf(this.state.calendarValue.split('/')[1]));
         let day = parseInt(this.state.calendarValue.split('/')[0]);
-        let date = '';
+        let date;
         if (this.state.calendarValue !== '') {
             let calendarType = this.props.calendarType ?
                 this.props.calendarType :
@@ -78,11 +78,10 @@ export default class CustomDatePicker extends Component {
                 date = DateUtils.toGregorianDate(new Date(year, month, day, 12), 'YYYY-MM-DD');
             } else {
                 let gregorianDate = toGregorian(year, month + 1, day);
-                date = DateUtils.toGregorianDate(new Date(gregorianDate.gy, gregorianDate.gm - 1, gregorianDate.gd, 12), 'YYYY-MM-DD');
+                date = new Date(gregorianDate.gy, gregorianDate.gm - 1, gregorianDate.gd, 12);
             }
         }
-        let {required, id} = this.props;
-        return {id: id, value: date, required: required};
+        return date.getTime().toString();
     }
 
     getType() {
@@ -269,18 +268,19 @@ export default class CustomDatePicker extends Component {
             this.selectedDate.month = this.wheelPickerMonth[this.state.monthValue];
             this.selectedDate.day = this.state.wheelPickerDay[this.state.dayValue];
             this.reloadDays(this.state.monthValue);
-            this.showModal({
-                innerView: Platform.OS === 'ios' ? this.renderCalendarIos : this.renderCalendarAndroid,
-                bottomSheet: true,
-                headerColor: '#fff',
-                innerViewPadding: 0,
-                closeOnBackdropClick: false,
-                draggable: false,
-                onClose: () => {
-                    me.onModalHide();
-                },
-                buttons: this.renderButtons
-            })
+            // this.showModal({
+            //     innerView: Platform.OS === 'ios' ? this.renderCalendarIos : this.renderCalendarAndroid,
+            //     bottomSheet: true,
+            //     headerColor: '#fff',
+            //     innerViewPadding: 0,
+            //     closeOnBackdropClick: false,
+            //     draggable: false,
+            //     onClose: () => {
+            //         me.onModalHide();
+            //     },
+            //     buttons: this.renderButtons
+            // })
+            me.props.onDatePickerClick(Platform.OS === 'ios' ? this.renderCalendarIos : this.renderCalendarAndroid, 0)
         })
     };
 
@@ -296,7 +296,7 @@ export default class CustomDatePicker extends Component {
 
     confirmCalendarModal = () => {
         let {onChangeText} = this.props;
-        this._modalRef && this._modalRef.close();
+        this.props.onModalClose && this.props.onModalClose();
         this.setState({
             yearValue: this.wheelPickerYear.indexOf(this.selectedDate.year),
             monthValue: this.wheelPickerMonth.indexOf(this.selectedDate.month),
@@ -304,8 +304,9 @@ export default class CustomDatePicker extends Component {
             calendarValue: this.selectedDate.day + '/' + this.selectedDate.month + '/' + this.selectedDate.year,
             isError: false,
             errorMessage: ''
+        }, () => {
+            onChangeText && onChangeText(this.getValue())
         });
-        onChangeText && onChangeText();
     };
 
     renderCalendarIos = (modalRef) => {
@@ -313,28 +314,31 @@ export default class CustomDatePicker extends Component {
 
         let fontFamily = 'IRANSansMobileFaNum-Light';
         return (
-            <View style={styles.modalContainerIos}>
-                <WheelPicker
-                    style={{width: '33%'}}
-                    data={this.state.wheelPickerDay}
-                    itemTextFontFamily={fontFamily}
-                    selectedItemTextFontFamily={fontFamily}
-                    onItemSelected={this.onDaySelected}
-                    selectedItem={this.state.dayValue}/>
-                <WheelPicker
-                    style={{width: '33%'}}
-                    data={this.wheelPickerMonth}
-                    itemTextFontFamily={fontFamily}
-                    selectedItemTextFontFamily={fontFamily}
-                    onItemSelected={this.onMonthSelected}
-                    selectedItem={this.state.monthValue}/>
-                <WheelPicker
-                    style={{width: '33%'}}
-                    data={this.wheelPickerYear}
-                    itemTextFontFamily={fontFamily}
-                    selectedItemTextFontFamily={fontFamily}
-                    onItemSelected={this.onYearSelected}
-                    selectedItem={this.state.yearValue}/>
+            <View>
+                <View style={styles.modalContainerIos}>
+                    <WheelPicker
+                        style={{width: '33%'}}
+                        data={this.state.wheelPickerDay}
+                        itemTextFontFamily={fontFamily}
+                        selectedItemTextFontFamily={fontFamily}
+                        onItemSelected={this.onDaySelected}
+                        selectedItem={this.state.dayValue}/>
+                    <WheelPicker
+                        style={{width: '33%'}}
+                        data={this.wheelPickerMonth}
+                        itemTextFontFamily={fontFamily}
+                        selectedItemTextFontFamily={fontFamily}
+                        onItemSelected={this.onMonthSelected}
+                        selectedItem={this.state.monthValue}/>
+                    <WheelPicker
+                        style={{width: '33%'}}
+                        data={this.wheelPickerYear}
+                        itemTextFontFamily={fontFamily}
+                        selectedItemTextFontFamily={fontFamily}
+                        onItemSelected={this.onYearSelected}
+                        selectedItem={this.state.yearValue}/>
+                </View>
+                {this.renderButtons()}
             </View>
         );
     };
@@ -344,34 +348,37 @@ export default class CustomDatePicker extends Component {
 
         let fontFamily = 'IRANSansMobileFaNum-Light';
         return (
-            <View style={styles.modalContainerAndroid}>
-                <View style={styles.startPlace}>
-                    <WheelPicker
-                        style={{width: '100%', height: 150}}
-                        data={this.state.wheelPickerDay}
-                        itemTextFontFamily={fontFamily}
-                        selectedItemTextFontFamily={fontFamily}
-                        onItemSelected={this.onDaySelected}
-                        selectedItem={this.state.dayValue}/>
+            <View>
+                <View style={styles.modalContainerAndroid}>
+                    <View style={styles.startPlace}>
+                        <WheelPicker
+                            style={{width: '100%', height: 150}}
+                            data={this.state.wheelPickerDay}
+                            itemTextFontFamily={fontFamily}
+                            selectedItemTextFontFamily={fontFamily}
+                            onItemSelected={this.onDaySelected}
+                            selectedItem={this.state.dayValue}/>
+                    </View>
+                    <View style={{width: '33.4%', alignItems: 'center'}}>
+                        <WheelPicker
+                            style={{width: '100%', height: 150}}
+                            data={this.wheelPickerMonth}
+                            itemTextFontFamily={fontFamily}
+                            selectedItemTextFontFamily={fontFamily}
+                            onItemSelected={this.onMonthSelected}
+                            selectedItem={this.state.monthValue}/>
+                    </View>
+                    <View style={styles.endPlace}>
+                        <WheelPicker
+                            style={{width: '100%', height: 150}}
+                            data={this.wheelPickerYear}
+                            itemTextFontFamily={fontFamily}
+                            selectedItemTextFontFamily={fontFamily}
+                            onItemSelected={this.onYearSelected}
+                            selectedItem={this.state.yearValue}/>
+                    </View>
                 </View>
-                <View style={{width: '33.4%', alignItems: 'center'}}>
-                    <WheelPicker
-                        style={{width: '100%', height: 150}}
-                        data={this.wheelPickerMonth}
-                        itemTextFontFamily={fontFamily}
-                        selectedItemTextFontFamily={fontFamily}
-                        onItemSelected={this.onMonthSelected}
-                        selectedItem={this.state.monthValue}/>
-                </View>
-                <View style={styles.endPlace}>
-                    <WheelPicker
-                        style={{width: '100%', height: 150}}
-                        data={this.wheelPickerYear}
-                        itemTextFontFamily={fontFamily}
-                        selectedItemTextFontFamily={fontFamily}
-                        onItemSelected={this.onYearSelected}
-                        selectedItem={this.state.yearValue}/>
-                </View>
+                {this.renderButtons()}
             </View>
         );
     };
@@ -390,15 +397,23 @@ export default class CustomDatePicker extends Component {
         let {required, placeholder} = this.props;
         return (
             <TouchableOpacity onPress={this.onCalendarClick}>
-                <TextInput
-                    label={placeholder ? placeholder : 'تاریخ'}
-                    editable={false}
-                    value={this.state.calendarValue}
-                    style={{
-                        fontFamily: 'IRANSansMobileFaNum-Light',
-                        direction: 'rtl',
-                        textAlign: 'right'
-                    }}/>
+                <View pointerEvents="none">
+                    <CustomTextInput
+                        placeholder={placeholder ? placeholder : 'تاریخ'}
+                        editable={false}
+                        value={this.state.calendarValue}
+                        backgroundStyles={[{
+                            fontFamily: 'IRANSansMobileFaNum-Light',
+                            fontSize: 13,
+                            direction: 'rtl',
+                            textAlign: 'right',
+                            backgroundColor: 'transparent',
+                            margin: 10,
+                            height: 55
+                        }]}
+                        underlineColor='transparent'
+                    />
+                </View>
             </TouchableOpacity>
         );
     }
@@ -414,16 +429,16 @@ export default class CustomDatePicker extends Component {
     renderButtons = () => {
         return (
             <View style={styles.buttonsContainer}>
-                <Button style={{marginTop: 20}}
+                <Button style={{marginTop: 20, marginHorizontal: 5}}
                         labelStyle={{fontFamily: 'IRANSansMobileFaNum-Light', fontSize: 18}}
                         mode="contained"
                         onPress={this.confirmCalendarModal}>
                     تایید
                 </Button>
-                <Button style={{marginTop: 20}}
+                <Button style={{marginTop: 20, marginHorizontal: 5}}
                         labelStyle={{fontFamily: 'IRANSansMobileFaNum-Light', fontSize: 18}}
                         mode="contained"
-                        onPress={this.onModalHide}>
+                        onPress={this.props.onModalClose}>
                     لغو
                 </Button>
             </View>
@@ -505,7 +520,8 @@ const styles = StyleSheet.create({
 
     buttonsContainer: {
         flexDirection: 'row',
-        backgroundColor: '#fff'
+        backgroundColor: '#fff',
+        justifyContent: 'center'
     },
 
     btnSize: {

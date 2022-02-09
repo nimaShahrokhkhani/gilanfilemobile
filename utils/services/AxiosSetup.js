@@ -1,5 +1,6 @@
 import axios from 'axios';
-let baseUrl = 'http://localhost:3600/';
+let baseUrl = 'https://gilanfile.ir/';
+// let baseUrl = 'http://192.168.1.102:3600/';
 
 const instance = axios.create({
     baseURL: baseUrl

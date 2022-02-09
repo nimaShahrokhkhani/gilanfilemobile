@@ -8,7 +8,7 @@ import {DrawerActions} from 'react-navigation-drawer';
 class BaseScreen extends React.Component {
 
     render() {
-        const {children, navigation, title} = this.props;
+        const {children, navigation, title, hasFilter, onFilterPress, hasAdd, onAddPress} = this.props;
         return (
             <View style={{flex: 1}}>
                 <StatusBar backgroundColor="#13213c" barStyle="light-content"/>
@@ -17,6 +17,22 @@ class BaseScreen extends React.Component {
                     <View style={styles.container}>
                         <View style={styles.topBar}>
                             <View style={styles.topBarStart}>
+                                {hasFilter &&
+                                <TouchableOpacity style={styles.shoppingCartContainer} onPress={onFilterPress}>
+                                    <Image
+                                        source={require('../images/filter.png')}
+                                        style={styles.icon}
+                                    />
+                                </TouchableOpacity>
+                                }
+                                {hasAdd &&
+                                <TouchableOpacity style={styles.shoppingCartContainer} onPress={onAddPress}>
+                                    <Image
+                                        source={require('../images/add.png')}
+                                        style={styles.icon}
+                                    />
+                                </TouchableOpacity>
+                                }
                             </View>
                             <View style={styles.topBarEnd}>
                                 <TouchableOpacity style={styles.hamburgerContainer}

@@ -2,6 +2,7 @@ import * as React from 'react';
 import {NavigationContainer} from '@react-navigation/native';
 import createNativeStackNavigator from "@react-navigation/native-stack/src/navigators/createNativeStackNavigator";
 import LoginScreen from "./screens/login/LoginScreen";
+import RegisterScreen from "./screens/register/RegisterScreen";
 import HomeScreen from "./screens/home/HomeScreen";
 import FlashMessage from "react-native-flash-message";
 import {StyleSheet, Text, View, ScrollView, TouchableOpacity, Image, Button} from 'react-native';
@@ -11,15 +12,16 @@ const Stack = createNativeStackNavigator();
 export default function App() {
     return (
         <View style={{flex: 1}}>
-            <FlashMessage position="top" />
             <NavigationContainer>
                 <Stack.Navigator screenOptions={{
                     headerShown: false
                 }} initialRouteName="Login">
                     <Stack.Screen name="LoginScreen" component={LoginScreen}/>
+                    <Stack.Screen name="RegisterScreen" component={RegisterScreen}/>
                     <Stack.Screen name="HomeScreen" component={HomeScreen}/>
                 </Stack.Navigator>
             </NavigationContainer>
+            <FlashMessage position="top" />
         </View>
     );
 }
